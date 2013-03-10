@@ -1,0 +1,4 @@
+all:
+	g++ -lm `sdl-config --libs` `sdl-config --cflags` Neurons.cpp -o Teste.o -O3
+clean:
+	rm -rf Teste.o
