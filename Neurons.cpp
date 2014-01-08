@@ -10,62 +10,37 @@ using namespace std;
 int main(int argc, char * argv[]){
 	srand(time(0));
 	Neuron * neurons_list = (Neuron *) malloc ( NEURONS_X * NEURONS_Y * sizeof ( Neuron ) );
-	Neuron * connects[8];
+	Neuron * connects[10];
 	long int fired[NEURONS_X * NEURONS_Y];
 	long int fired_index = 0;
-	long int i, j;
+	long int i, j, posx, posy;
 	for(i = 0; i < NEURONS_X * NEURONS_Y; i++){
-	#if 1
-		if(i / NEURONS_Y + 1 < NEURONS_Y){
-			connects[2] = &neurons_list[(i / NEURONS_Y + 1) * NEURONS_X + i % NEURONS_X];
-			if(i % NEURONS_X + 1 < NEURONS_X){
-				connects[1] = &neurons_list[(i / NEURONS_Y + 1) * NEURONS_X + i % NEURONS_X + 1];
+
+		posx = i % NEURONS_X;
+		posy = (i / NEURONS_X + 1) % NEURONS_Y;
+		connects[0] = &neurons_list[posx + posy * NEURONS_X];
+
+		posx = i % NEURONS_X;
+		posy = (i / NEURONS_X - 1);
+		if(posy < 0) posy += NEURONS_X;
+		connects[1] = &neurons_list[posx + posy * NEURONS_X];
+
+		posx = (i + 1) % NEURONS_X;
+		posy = i / NEURONS_X;
+		connects[2] = &neurons_list[posx + posy * NEURONS_X];
+
+		posx = (i - 1) % NEURONS_X;
+		posy = i / NEURONS_X;
+		if(posx < 0) posx += NEURONS_X;
+		connects[3] = &neurons_list[posx + posy * NEURONS_X];
+		for(j = 4; j < 10; j ++){
+			if(rand() % 100000 / 100000.0 < P){
+				connects[j] = &neurons_list[rand() % (NEURONS_X * NEURONS_Y)];
 			}else{
-				connects[1] = NULL;
+				break;
 			}
-			if(i % NEURONS_X - 1){
-				connects[3] = &neurons_list[(i / NEURONS_Y + 1) * NEURONS_X + i % NEURONS_X - 1];
-			}else{
-				connects[3] = NULL;
-			}
-		}else{
-			connects[1] = NULL;
-			connects[2] = NULL;
-			connects[3] = NULL;
 		}
-		if(i / NEURONS_Y - 1 >= 0){
-			connects[6] = &neurons_list[(i / NEURONS_Y - 1) * NEURONS_X + i % NEURONS_X];
-			if(i % NEURONS_X + 1 < NEURONS_X){
-				connects[7] = &neurons_list[(i / NEURONS_Y - 1) * NEURONS_X + i % NEURONS_X + 1];
-			}else{
-				connects[7] = NULL;
-			}
-			if(i % NEURONS_X - 1){
-				connects[5] = &neurons_list[(i / NEURONS_Y - 1) * NEURONS_X + i % NEURONS_X - 1];
-			}else{
-				connects[5] = NULL;
-			}
-		}else{
-			connects[5] = NULL;
-			connects[6] = NULL;
-			connects[7] = NULL;
-		}
-		if(i % NEURONS_X + 1 < NEURONS_X){
-			connects[0] = &neurons_list[(i / NEURONS_Y) * NEURONS_X + i % NEURONS_X + 1];
-		}else{
-			connects[0] = NULL;
-		}
-		if(i % NEURONS_X - 1){
-			connects[4] = &neurons_list[(i / NEURONS_Y) * NEURONS_X + i % NEURONS_X - 1];
-		}else{
-			connects[4] = NULL;
-		}
-		#else
-		for(j = 0; j < 8; j ++){
-			connects[j] = &neurons_list[rand() % (NEURONS_X * NEURONS_Y)];
-		}
-		#endif
-		neurons_list[i].Create(i % NEURONS_X, i / NEURONS_X, &connects[0],rand() % 1000 > 60);// rand() % 1000 > 100);
+		neurons_list[i].Create(i % NEURONS_X, i / NEURONS_X, &connects[0], j, 2);// rand() % 1000 > 100);
 	}
 	if (SDL_Init(SDL_INIT_VIDEO) < 0 ) return 1; 
 	SDL_Event event;
@@ -92,13 +67,16 @@ int main(int argc, char * argv[]){
 		}
 		for(i = 0; i < NEURONS_X * NEURONS_Y; i++){
 			neurons_list[i].run();
-			if(neurons_list[i].v >= 30) fired[fired_index++] = i;
+			if(neurons_list[i].v >= 1){
+				fired[fired_index++] = i;
+			}
+			//cout << neurons_list[i].v << "\n";
 		}
-		//for(i = 0; i < NEURONS_X * NEURONS_Y; i++){
-		//	//cout << neurons_list[i].v << "\n";
-		//	int color = sqrt(neurons_list[i].v * neurons_list[i].v);
-		//	setpixel(screen, neurons_list[i].x, neurons_list[i].y, color, color, color);
-		//}
+		for(i = 0; i < NEURONS_X * NEURONS_Y; i++){
+			//cout << neurons_list[i].v << "\n";
+			int color = sqrt(neurons_list[i].v * neurons_list[i].v) * 255;
+			setpixel(screen, neurons_list[i].x, neurons_list[i].y, color, color, color);
+		}
 		setpixel(screen, (int)(t / 3.0) % WIDTH, -fired_index / 100.0 + 1000, 255, 255, 255);
 		if((int)(t / 3.0) % WIDTH == 0){
 			for(i = 0; i < WIDTH; i ++){
@@ -107,18 +85,17 @@ int main(int argc, char * argv[]){
 				}
 			}
 		}
-		for(i = 0; i < fired_index; i++){
-			setpixel(screen, neurons_list[fired[i]].x, neurons_list[fired[i]].y, 255, 255, 255);
-			neurons_list[fired[i]].v = neurons_list[fired[i]].c;
-			neurons_list[fired[i]].u += neurons_list[fired[i]].d;
-			neurons_list[fired[i]].send();
-		}
 		SDL_Flip(screen);
 		for(i = 0; i < fired_index; i++){
 			setpixel(screen, neurons_list[fired[i]].x, neurons_list[fired[i]].y, 0, 0, 0);
 		}
 		for(i = 0; i < NEURONS_X * NEURONS_Y; i++){
 			neurons_list[i].update();
+		}
+		for(i = 0; i < fired_index; i++){
+			setpixel(screen, neurons_list[fired[i]].x, neurons_list[fired[i]].y, 255, 255, 255);
+			neurons_list[fired[i]].send();
+			neurons_list[fired[i]].v = 0;
 		}
 		fired_index = 0;
 		++t;
